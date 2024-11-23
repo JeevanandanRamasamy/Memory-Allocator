@@ -1,47 +1,101 @@
 # Memory-Allocator
 
-This program is a custom implementation of malloc, free, and realloc. To use these methods, it is best to use a separate c file with the main method and linking the files together.
+**Memory-Allocator** is a custom implementation of memory management functions, including `malloc`, `free`, and `realloc`. This library provides an efficient memory allocation system, allowing developers to manage dynamic memory manually in C programs. To use these functions, it's best to create a separate C file with the `main` function and link it with the provided source files.
 
-## void myinit(int allocAlg)
+---
 
-Creates a 1 MB “heap” and other initializations the code needs. Any application using this library must call this function first. The allocAlg argument describes what algorithm to use to find a free block:
+## Functions
 
-0: first fit
+### `void myinit(int allocAlg)`
 
-1: next fit
+Initializes the memory allocator with a 1 MB "heap" and sets up the required data structures. This function must be called first in any application using this library. 
 
-2: best fit
+- **`allocAlg`**: Specifies the algorithm to be used for finding a free block:
+  - `0`: **First Fit** – Allocates the first available block that fits the size.
+  - `1`: **Next Fit** – Allocates the next available block that fits the size, starting from the last allocated block.
+  - `2`: **Best Fit** – Allocates the smallest available block that fits the requested size.
 
-## void* mymalloc(size_t size)
+---
 
-From the “heap”, allocates a region of at least the requested size and returns a pointer to the beginning of the region. If it cannot be allocated, returns NULL.
+### `void* mymalloc(size_t size)`
 
-All returned addresses must be 8-byte aligned. That is, the region allocated starts at an address that’s divisible by 8.
+Allocates a region of memory of at least the requested size from the "heap" and returns a pointer to the beginning of the region. The memory is 8-byte aligned.
 
-If size is 0, mymalloc does nothing and returns NULL.
+- If the allocation fails, it returns `NULL`.
+- If the requested size is `0`, `mymalloc` does nothing and returns `NULL`.
 
-## void myfree(void* ptr)
+---
 
-Marks the given region as free and available to be allocated for future requests. It is coalesced with adjacent free regions.
+### `void myfree(void* ptr)`
 
-This implementation uses an implicit free list.
+Marks the given memory region as free and available for future allocations. Adjacent free regions are coalesced to form larger blocks.
 
-If ptr is NULL, myfree does nothing.
+- The implementation uses an **implicit free list** for memory management.
+- If the pointer is `NULL`, `myfree` does nothing.
 
-## void* myrealloc(void* ptr, size_t size)
+---
 
-Reallocate the region pointed to by ptr to be at least the new given size. If this cannot be done in-place, a new region is allocated, the data from the original region is copied over, and the old region is freed.
+### `void* myrealloc(void* ptr, size_t size)`
 
-If the reallocation can’t be done, returns NULL.
+Reallocates the memory region pointed to by `ptr` to at least the new requested size. If the reallocation cannot be done in-place, it allocates a new region, copies the data from the original region, and frees the old memory block.
 
-If ptr is NULL, this is equivalent to mymalloc(size).
+- If reallocation is not possible, it returns `NULL`.
+- If `ptr` is `NULL`, it behaves like `mymalloc(size)`.
+- If `size` is `0`, it behaves like `myfree(ptr)` and returns `NULL`.
+- If both `ptr` is `NULL` and `size` is `0`, `myrealloc` does nothing and returns `NULL`.
 
-If size is 0, this is equivalent to myfree(ptr) and myrealloc returns NULL.
+---
 
-If both ptr is NULL and size is 0, myrealloc does nothing and returns NULL.
+### `void mycleanup()`
 
-## void mycleanup()
+Frees the 1 MB "heap" and performs any necessary cleanup. This function must be called last in any application using this library.
 
-Frees the 1 MB “heap” and performs other cleanup the code needs. Any application using this library must call this function last.
+- Calling `mycleanup` allows the system to reset by releasing all allocated memory and freeing up resources.
+- If needed, the allocator can be reset by calling `mycleanup` followed by `myinit`.
 
-The library supports “resetting” everything by calling mycleanup followed by myinit.
+---
+
+## Usage
+
+1. **Create a separate C file** that includes the `main` function and links with this library.
+2. **Call `myinit`** at the start of your program to initialize the memory allocator.
+3. **Use `mymalloc`, `myfree`, and `myrealloc`** to manage memory throughout your program.
+4. **Call `mycleanup`** at the end of your program to free up resources and reset the allocator.
+
+---
+
+## Example
+
+```c
+#include "memory_allocator.h"
+
+int main() {
+    myinit(0);  // Initialize the memory allocator with the "First Fit" algorithm
+
+    // Allocate memory for an integer array of 10 elements
+    int* arr = (int*)mymalloc(10 * sizeof(int));
+
+    if (arr == NULL) {
+        // Handle memory allocation failure
+        printf("Memory allocation failed!\n");
+        return 1;
+    }
+
+    // Reallocate memory to increase the size of the array
+    arr = (int*)myrealloc(arr, 20 * sizeof(int));
+
+    if (arr == NULL) {
+        // Handle memory reallocation failure
+        printf("Memory reallocation failed!\n");
+        return 1;
+    }
+
+    // Free the allocated memory
+    myfree(arr);
+
+    // Clean up at the end of the program
+    mycleanup();
+    
+    return 0;
+}
+```
